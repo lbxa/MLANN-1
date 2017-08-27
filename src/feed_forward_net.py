@@ -16,6 +16,7 @@ import numpy as np
 class FFN(object):
     
     def __init__(self):
+
         # define hyperparameters
         self.input_layer_size = 2
         self.hidden_layer_size = 3
@@ -25,37 +26,38 @@ class FFN(object):
         self.W1 = np.random.randn(self.input_layer_size, self.hidden_layer_size)
         self.W2 = np.random.randn(self.hidden_layer_size, self.ouput_layer_size)
 
+    # forward propagation
     def forward(self, X):
-        # forward propagation
         self.z2 = np.dot(X, self.W1)
         self.a2 = self.relu(self.z2)
         self.z3 = np.dot(self.a2, self.W2)
         prediction = self.sigmoid(self.z3)
         return prediction
 
-    # define activation functions
+    # activation functions
+    def sigmoid(self, X):
+        return 1/(1 + np.exp(-X))
 
-    def sigmoid(self, z):
-        return 1/(1 + np.exp(-z))
+    def relu(self, X):
+        return np.maximum(X, 0)
 
-    def relu(self, z):
-        return np.maximum(z, 0)
-
-    def scale_data(self, x, y):
-        # account for difference in units
+    # account for difference in units
+    def scale_data(self, X, y):
         MAX_SCORE = 100
-        x = x/np.amax(x, axis=0)
+        X = X/np.amax(X, axis=0)
         y /= MAX_SCORE
+        return X, y
 
 if __name__ == "__main__":
 
     data_set = np.array(([3,5],[5,1],[10,2]), dtype=float)
     labels   = np.array(([75],[82],[93]), dtype=float)
-
-    my_nn = FFN()
-    y_hat = my_nn.forward(data_set)
-
-    print(labels)
-    print(y_hat)
+    
+    Rodney = FFN()
+    data_set, labels = Rodney.scale_data(data_set, labels)
+    predictions = Rodney.forward(data_set)
+    
+    print("2:", labels)
+    print(predictions)
 
 
