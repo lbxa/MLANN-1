@@ -52,12 +52,12 @@ if __name__ == "__main__":
 
     data_set = np.array(([3,5],[5,1],[10,2]), dtype=float)
     labels   = np.array(([75],[82],[93]), dtype=float)
-    
+
     Rodney = FFN()
     data_set, labels = Rodney.scale_data(data_set, labels)
     predictions = Rodney.forward(data_set)
     
-    print("2:", labels)
+    print("1:", labels)
     print(predictions)
 
 
