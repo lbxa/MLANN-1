@@ -166,7 +166,7 @@ if __name__ == "__main__":
     test_x = np.array(([4, 5.5],[4.5, 1],[9,2.5],[6,2]), dtype=float)
     test_y = np.array(([70],[89],[85],[75]), dtype=float)
 
-    NN = FNN(learning_rate=0.0001)
+    NN = FNN(learning_rate=0.001)
 
     # numerical gradient checking
     numerical_gradient = NN.compute_numerical_gradient(train_x, train_y)
@@ -174,7 +174,7 @@ if __name__ == "__main__":
 
     # normalize data
     train_x, train_y = NN.normalize_data(train_x, train_y)
-    test_x, test_y = NN.normalize_data(text_x, test_y)
+    test_x, test_y = NN.normalize_data(test_x, test_y)
 
     T = Trainer(NN)
     T.train(train_x, train_y, test_x, test_y)
@@ -182,12 +182,16 @@ if __name__ == "__main__":
     # lets test out out new baby
     predictions = NN.forward(train_x)
 
+    print("-"*60)
     print("Known Outputs")
-    print("-"*80)
+    print("-"*60)
+
     for i in range(len(train_y)):
         print(int(train_y[i] * 100), "/100 marks", sep="")
 
+    print("-"*60)
     print("Predictions")
-    print("-"*80)
+    print("-"*60)
+
     for i in range(len(predictions)):
         print(int(predictions[i] * 100), "/100 marks", sep="")
