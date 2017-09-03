@@ -9,12 +9,14 @@
 
     This model is based on estimating your SAT score based on the amount of
     hours you slept and the amount of hours you studied the night before
+
+    28.07.2017 | Oakhill College | SDD | Open Source Software (C) | Lucas Barbosa
 '''
 
 import numpy as np
 from scipy import optimize
 
-class FNN(object):
+class Neural_Network(object):
 
     def __init__(self, learning_rate=0):
         # define hyperparameters
@@ -26,108 +28,126 @@ class FNN(object):
         self.W1 = np.random.randn(self.input_layer_size, self.hidden_layer_size)
         self.W2 = np.random.randn(self.hidden_layer_size, self.output_layer_size)
 
-        # regularizartion parameter
+        # regularization parameter
         self.learning_rate = learning_rate
 
+    # forward propagation
     def forward(self, X):
-        # forward propagation
         self.z2 = np.dot(X, self.W1)
         self.a2 = self.sigmoid(self.z2)
         self.z3 = np.dot(self.a2, self.W2)
         prediction = self.sigmoid(self.z3)
         return prediction
 
-    # define activation function
+    # activation functions
     def sigmoid(self, z):
         return 1 / (1 + np.exp(-z))
 
+    # derivative of sigmoid function
     def sigmoid_prime(self, z):
         return np.exp(-z) / ((1 + np.exp(-z))**2)
 
-    # backprop
+    # efficient backprop
     def cost_function(self, X, desired_output):
         self.prediction = self.forward(X)
         total_error = ((1/2) * sum((desired_output - self.prediction)**2)) / X.shape[0] + \
                       (self.learning_rate / 2) * (np.sum(self.W1**2) + np.sum(self.W2**2))
-
         return total_error
 
     def cost_function_prime(self, X, desired_y):
         self.prediction = self.forward(X)
 
-        # layer 3 backpropgation error
-        l3_backprop_error   = np.multiply(-(desired_y - self.prediction), self.sigmoid_prime(self.z3))
-        cost_in_terms_of_W2 = np.dot(self.a2.T, l3_backprop_error) / X.shape[0] + (self.learning_rate * self.W2)
+        # layer 3 backprop error
+        l3_backprop_error   = np.multiply(-(desired_y - self.prediction), \
+                              self.sigmoid_prime(self.z3))
+        # divide by X.shape[0] to account for the scale of the data
+        cost_in_terms_of_W2 = np.dot(self.a2.T, l3_backprop_error) / X.shape[0] + \
+                              (self.learning_rate * self.W2)
 
-        # layer 2 backpropation error
-        l2_backprop_error   = np.dot(l3_backprop_error, self.W2.T) * self.sigmoid_prime(self.z2)
-        cost_in_terms_of_W1 = np.dot(X.T, l2_backprop_error) / X.shape[0] + (self.learning_rate * self.W1)
+        # layer 2 backprop error
+        l2_backprop_error   = np.dot(l3_backprop_error, self.W2.T) * \
+                              self.sigmoid_prime(self.z2)
+        # divide by X.shape[0] to account for the scale of the data
+        cost_in_terms_of_W1 = np.dot(X.T, l2_backprop_error) / X.shape[0] + \
+                              (self.learning_rate * self.W1)
 
         return cost_in_terms_of_W1, cost_in_terms_of_W2
 
-    # scale the data making sure its all the same
-    def normalize_data(self, study_hours, test_scores):
-        MAX_SCORE = 100.
-        study_hours = study_hours / np.amax(study_hours, axis=0)
-        test_scores /= MAX_SCORE
-        return study_hours, test_scores
-
-    # helper functions to interact with other classes and methods
+    # altering and setting the parameters during training
     def get_params(self):
-        # get W1 and W2 rolled into a vector
+        # get W1 & W2 rolled into a vector
         params = np.concatenate((self.W1.ravel(), self.W2.ravel()))
         return params
 
     def set_params(self, params):
-        # set W1 and W2 using single parameter vector
+        # set W1 & W2 using single parameter vector
         W1_start = 0
         W1_end   = self.hidden_layer_size * self.input_layer_size
-        self.W1  = np.reshape(params[W1_start : W1_end], (self.input_layer_size, self.hidden_layer_size))
-        W2_end   = W1_end + (self.hidden_layer_size * self.output_layer_size)
-        self.W2  = np.reshape(params[W1_end : W2_end], (self.hidden_layer_size, self.output_layer_size))
+        # reshape the W1 weights
+        self.W1  = np.reshape(params[W1_start : W1_end], \
+                   (self.input_layer_size, self.hidden_layer_size))
+        W2_end   = W1_end + self.hidden_layer_size * self.output_layer_size
+        # reshape the W2 weights
+        self.W2  = np.reshape(params[W1_end : W2_end], \
+                   (self.hidden_layer_size, self.output_layer_size))
 
-    # checking gradients with numerical gradient computation
     def compute_gradient(self, X, desired_y):
         cost_in_terms_of_W1, cost_in_terms_of_W2 = self.cost_function_prime(X, desired_y)
-
         return np.concatenate((cost_in_terms_of_W1.ravel(), cost_in_terms_of_W2.ravel()))
 
-    # using epsilon addition and difference method (refer to docs)
+class Helper(object):
+
+    def __init__(self, Local_Ref):
+        # set a local reference to NN class
+        self.Local_Ref = Local_Ref
+
+    # normalize data to account for different units
+    def scale_data(self, hours, test_score):
+        MAX_SCORE = 100.
+        hours      /= np.amax(hours, axis=0)
+        test_score /= MAX_SCORE
+        return hours, test_score
+
+    def init_test(self):
+        pass
+
+    # checking gradients with numerical gradient computation avoiding logic errors
     def compute_numerical_gradient(self, X, desired_y):
-        initial_params     = self.get_params()
+        initial_params     = self.Local_Ref.get_params()
         numerical_gradient = np.zeros(initial_params.shape)
         perturb            = np.zeros(initial_params.shape)
-        e = 1e-4
+
+        # epsilon value needs to be small enough act as a 'zero'
+        epsilon = 1e-4
 
         for i in range(len(initial_params)):
-            # set perturbation vector
-            perturb[i] = e
-            self.set_params(initial_params + perturb)
-            loss_2 = self.cost_function(X, desired_y)
+            # set perturbation vector to alter the original state of the initial params
+            perturb[i] = epsilon
+            self.Local_Ref.set_params(initial_params + perturb)
+            loss_2 = self.Local_Ref.cost_function(X, desired_y)
 
-            self.set_params(initial_params - perturb)
-            loss_1 = self.cost_function(X, desired_y)
+            self.Local_Ref.set_params(initial_params - perturb)
+            loss_1 = self.Local_Ref.cost_function(X, desired_y)
 
             # computer numerical gradient
-            numerical_gradient[i] = (loss_2 - loss_1) / (2 * e)
+            numerical_gradient[i] = (loss_2 - loss_1) / (2 * epsilon)
 
             perturb[i] = 0
 
-        self.set_params(initial_params)
+        self.Local_Ref.set_params(initial_params)
         return numerical_gradient
 
 class Trainer(object):
 
     def __init__(self, Local_Ref):
-        # make local reference to neural network
+        # make local reference to NN
         self.Local_Ref = Local_Ref
 
-    # cost function requries a wrapper due to ours being sophisticated
     def cost_function_wrapper(self, params, X, desired_y):
         self.Local_Ref.set_params(params)
-        cost = self.Local_Ref.cost_function(X, desired_y)
-        gradient = self.Local_Ref.compute_gradient(X, desired_y)
-        return cost, gradient
+        total_cost = self.Local_Ref.cost_function(X, desired_y)
+        gradient   = self.Local_Ref.compute_gradient(X, desired_y)
+        return total_cost, gradient
 
     # track cost function value as training progresses
     def callback(self, params):
@@ -137,28 +157,31 @@ class Trainer(object):
 
     def train(self, train_x, train_y, test_x, test_y):
 
+        # internal variable for callback function
         self.train_x = train_x
         self.train_y = train_y
 
         self.test_x = test_x
         self.test_y = test_y
 
+        # empty lists to store costs
         self.cost_list = []
         self.test_cost_list = []
 
-        initial_params = self.Local_Ref.get_params()
+        initial_params =  self.Local_Ref.get_params()
 
         options = {"maxiter": 200, "disp": True}
-        _res = optimize.minimize(self.cost_function_wrapper, initial_params, jac=True, \
-                                 method="BFGS", args=(train_x, train_y), options=options, \
-                                 callback=self.callback)
+        _result = optimize.minimize(self.cost_function_wrapper, initial_params, jac=True, \
+                                    method="BFGS", args=(train_x, train_y), options=options, \
+                                    callback=self.callback)
 
-        self.Local_Ref.set_params(_res.x)
-        self.optimization_res = _res
+        # once the training is complete finally set the new values in
+        self.Local_Ref.set_params(_result.x)
+        self.optimization_results = _result
 
 if __name__ == "__main__":
 
-        # training data
+    # training data
     train_x = np.array(([3,5],[5,1],[10,2],[6,1.5]), dtype=float)
     train_y = np.array(([75],[82],[93],[70]), dtype=float)
 
@@ -166,32 +189,18 @@ if __name__ == "__main__":
     test_x = np.array(([4, 5.5],[4.5, 1],[9,2.5],[6,2]), dtype=float)
     test_y = np.array(([70],[89],[85],[75]), dtype=float)
 
-    NN = FNN(learning_rate=0.001)
-
-    # numerical gradient checking
-    numerical_gradient = NN.compute_numerical_gradient(train_x, train_y)
-    gradient = NN.compute_gradient(train_x, train_y)
+    # initialize all the classes
+    NN = Neural_Network(learning_rate=0.0001)
+    Aux = Helper(NN)
+    T1 = Trainer(NN)
 
     # normalize data
-    train_x, train_y = NN.normalize_data(train_x, train_y)
-    test_x, test_y = NN.normalize_data(test_x, test_y)
+    train_x, train_y = Aux.scale_data(train_x, train_y)
+    test_x, test_y   = Aux.scale_data(test_x, test_y)
 
-    T = Trainer(NN)
-    T.train(train_x, train_y, test_x, test_y)
+    # check to see gradients have been correctly calculated
+    numerical_gradient = Aux.compute_numerical_gradient(train_x, train_y)
+    computed_gradient  = NN.compute_gradient(train_x, train_y)
 
-    # lets test out out new baby
-    predictions = NN.forward(train_x)
-
-    print("-"*60)
-    print("Known Outputs")
-    print("-"*60)
-
-    for i in range(len(train_y)):
-        print(int(train_y[i] * 100), "/100 marks", sep="")
-
-    print("-"*60)
-    print("Predictions")
-    print("-"*60)
-
-    for i in range(len(predictions)):
-        print(int(predictions[i] * 100), "/100 marks", sep="")
+    # train the network
+    T1.train(train_x, train_y, test_x, test_y)
