@@ -1,18 +1,30 @@
 '''
     Feed-Foward Artificial Neural Network
     -------------------------------------
+
     Feed-foward nets are the simplest NN's to master. They are comprised of
     an input layer, one or more hidden layers and an output layer. Since the
-    dimensionality of out data is 2 to 1, there will be 2 input neruons and
-    a single output neuron. For sake of simplicty this net will restrict
-    itself to a single hidden layer (deep belief networks can be for later).
+    dimensionality of out data is 2 inputs to 1 output, there will be 2 input
+    neruons and a single output neuron. For sake of simplicty this net will
+    restrict itself to a single hidden layer (deep belief networks can be for
+    another time).
 
-    This model is based on estimating your SAT score based on the amount of
-    hours you slept and the amount of hours you studied the night before
+    This model revolves around on estimating your SAT score based on the amount of
+    hours you slept and the amount of hours you studied the night before. For
+    more information including the theory papers for the algorthms behind the
+    backpropagation refer to the user manual.
+
+    This software does requires 2 dependencies:
+      > Numpy Library (https://docs.scipy.org/doc/numpy-1.13.0/user/install.html)
+      > Scipy Library (https://www.scipy.org/install.html)
+
+    Python Version: 3.6
 
     28.07.2017 | Oakhill College | SDD | Open Source Software (C) | Lucas Barbosa
 '''
 
+# dependencies for operation
+import sys
 import numpy as np
 from scipy import optimize
 
@@ -108,8 +120,20 @@ class Helper(object):
         test_score /= MAX_SCORE
         return hours, test_score
 
-    def init_test(self):
-        pass
+    # print out the results of the NN's predicitons
+    def print_predictions(self, train_x, train_y):
+        print("="*50)
+        print("Expected Scores:")
+        for i in range(0, len(train_y)):
+            print(int(train_y[i] * 100), "/100", sep="")
+
+        print("="*50)
+
+        predictions = NN.forward(train_x)
+        print("Predicted Scores:")
+        for i in range(0, len(train_x)):
+            print(int(predictions[i] * 100), "/100", sep="")
+        print("="*50)
 
     # checking gradients with numerical gradient computation avoiding logic errors
     def compute_numerical_gradient(self, X, desired_y):
@@ -170,16 +194,21 @@ class Trainer(object):
 
         initial_params =  self.Local_Ref.get_params()
 
+        # using scipy's built in Quasi-Newton BFGS mathematical optimization algorithm
         options = {"maxiter": 200, "disp": True}
         _result = optimize.minimize(self.cost_function_wrapper, initial_params, jac=True, \
                                     method="BFGS", args=(train_x, train_y), options=options, \
                                     callback=self.callback)
 
-        # once the training is complete finally set the new values in
+        # once the training is complete finally set the new values of the parameters in
         self.Local_Ref.set_params(_result.x)
         self.optimization_results = _result
 
 if __name__ == "__main__":
+
+    # check if numpy and scipy are installed before running any code
+    if "numpy" not in sys.modules or "scipy" not in sys.modules:
+        raise AssertionError("The required dependencies have not been imported.")
 
     # training data
     train_x = np.array(([3,5],[5,1],[10,2],[6,1.5]), dtype=float)
@@ -204,3 +233,6 @@ if __name__ == "__main__":
 
     # train the network
     T1.train(train_x, train_y, test_x, test_y)
+
+    # observe the results of the tests on above datasets
+    Aux.print_predictions(train_x, train_y)
